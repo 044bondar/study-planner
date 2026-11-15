@@ -1,18 +1,28 @@
 import { useState, type FormEvent } from 'react';
-import { useTaskContext } from '../hooks/useTaskContext';
-import type { Priority, Task } from '../types/task';
+import type { NewTaskData, Priority, Task, UpdateTaskData } from '../types/task';
 import './TaskForm.scss';
 
-function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
-    const { addTask, updateTask, setEditingTask } = useTaskContext();
+interface TaskFormProps {
+    editingTask: Task | null;
+    onAddTask: (data: NewTaskData) => Promise<void>;
+    onUpdateTask: (id: number, data: UpdateTaskData) => Promise<void>;
+    onCancelEdit: () => void;
+}
 
+function TaskFormInner({
+                           editingTask,
+                           onAddTask,
+                           onUpdateTask,
+                           onCancelEdit,
+                       }: TaskFormProps) {
     const [title, setTitle] = useState(editingTask?.title ?? '');
     const [description, setDescription] = useState(editingTask?.description ?? '');
     const [category, setCategory] = useState(editingTask?.category ?? 'React');
     const [priority, setPriority] = useState<Priority>(editingTask?.priority ?? 'medium');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!title.trim()) {
@@ -23,26 +33,34 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
         const payload = {
             title: title.trim(),
             description: description.trim() || 'Без опису',
-            category: category.trim() || 'Загальне',
+            category: category.trim() || 'General',
             priority,
         };
 
-        if (editingTask) {
-            updateTask(editingTask.id, payload);
-        } else {
-            addTask(payload);
-            setTitle('');
-            setDescription('');
-            setCategory('React');
-            setPriority('medium');
+        setIsSubmitting(true);
+        try {
+            if (editingTask) {
+                await onUpdateTask(editingTask.id, payload);
+                onCancelEdit();
+            } else {
+                await onAddTask(payload);
+                setTitle('');
+                setDescription('');
+                setCategory('React');
+                setPriority('medium');
+            }
+            setError('');
+        } catch {
+            // Помилка вже оброблена у Toast
+        } finally {
+            setIsSubmitting(false);
         }
-        setError('');
     };
 
     return (
         <form className="task-form" onSubmit={handleSubmit}>
             <h2 className="task-form__title">
-                {editingTask ? `Редагування: ${editingTask.title}` : 'Нове навчальне завдання'}
+                {editingTask ? `Редагування: ${editingTask.title}` : 'Нове навчальне завдання (API)'}
             </h2>
 
             <div className="task-form__grid">
@@ -51,8 +69,9 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
                     <input
                         className="task-form__input"
                         type="text"
-                        placeholder="Наприклад: Вивчити useReducer"
+                        placeholder="Наприклад: Вивчити Repository Pattern"
                         value={title}
+                        disabled={isSubmitting}
                         onChange={(e) => {
                             setTitle(e.target.value);
                             if (error) setError('');
@@ -67,6 +86,7 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
                         type="text"
                         placeholder="Короткий опис завдання"
                         value={description}
+                        disabled={isSubmitting}
                         onChange={(e) => setDescription(e.target.value)}
                     />
                 </div>
@@ -76,8 +96,9 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
                     <input
                         className="task-form__input"
                         type="text"
-                        placeholder="React, TypeScript, Git..."
+                        placeholder="React, TypeScript..."
                         value={category}
+                        disabled={isSubmitting}
                         onChange={(e) => setCategory(e.target.value)}
                     />
                 </div>
@@ -87,6 +108,7 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
                     <select
                         className="task-form__select"
                         value={priority}
+                        disabled={isSubmitting}
                         onChange={(e) => setPriority(e.target.value as Priority)}
                     >
                         <option value="low">Low (Низький)</option>
@@ -99,14 +121,19 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
             {error && <p className="task-form__error">{error}</p>}
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="submit" className="task-form__submit">
-                    {editingTask ? 'Зберегти зміни' : 'Додати завдання'}
+                <button type="submit" className="task-form__submit" disabled={isSubmitting}>
+                    {isSubmitting
+                        ? 'Збереження...'
+                        : editingTask
+                            ? 'Зберегти зміни'
+                            : 'Додати завдання'}
                 </button>
                 {editingTask && (
                     <button
                         type="button"
                         className="task-filters__btn"
-                        onClick={() => setEditingTask(null)}
+                        disabled={isSubmitting}
+                        onClick={onCancelEdit}
                     >
                         Скасувати
                     </button>
@@ -116,7 +143,6 @@ function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
     );
 }
 
-export function TaskForm() {
-    const { editingTask } = useTaskContext();
-    return <TaskFormInner key={editingTask?.id ?? 'new'} editingTask={editingTask} />;
+export function TaskForm(props: TaskFormProps) {
+    return <TaskFormInner key={props.editingTask?.id ?? 'new'} {...props} />;
 }

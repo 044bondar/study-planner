@@ -1,6 +1,7 @@
 export type Priority = 'low' | 'medium' | 'high';
 export type FilterStatus = 'all' | 'completed' | 'active';
 
+// Domain model (використовується в UI)
 export interface Task {
     id: number;
     title: string;
@@ -11,32 +12,32 @@ export interface Task {
 }
 
 export type NewTaskData = Omit<Task, 'id' | 'completed'>;
-export type UpdateTaskData = Partial<NewTaskData>;
+export type UpdateTaskData = Partial<Omit<Task, 'id'>>;
 
-export interface PendingDelete {
-    task: Task;
-    expiresAt: number;
+// API DTO (модель DummyJSON)
+export interface ApiTodo {
+    id: number;
+    todo: string;
+    completed: boolean;
+    userId: number;
+}
+
+export interface TodosResponse {
+    todos: ApiTodo[];
+    total: number;
+    skip: number;
+    limit: number;
+}
+
+export interface PaginatedTasks {
+    tasks: Task[];
+    total: number;
+    skip: number;
+    limit: number;
 }
 
 export interface ToastMessage {
     id: number;
     text: string;
-    type: 'success' | 'info' | 'error' | 'undo';
-    canUndo?: boolean;
-    expiresAt?: number;
+    type: 'success' | 'info' | 'error';
 }
-
-export interface TaskState {
-    tasks: Task[];
-    pendingDelete: PendingDelete | null;
-}
-
-export type TaskAction =
-    | { type: 'add'; payload: NewTaskData }
-    | { type: 'toggle'; payload: number }
-    | { type: 'update'; payload: { id: number; data: UpdateTaskData } }
-    | { type: 'requestDelete'; payload: number }
-    | { type: 'confirmDelete' }
-    | { type: 'undoDelete' }
-    | { type: 'clearCompleted' }
-    | { type: 'reset'; payload: Task[] };
