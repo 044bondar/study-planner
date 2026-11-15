@@ -11,4 +11,18 @@
     color: #6b7280;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
+  &--pending-delete {
+    opacity: 0.45;
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+    pointer-events: none;
+  }
+  &--edit {
+    background: #fef3c7;
+    color: #b45309;
+
+    &:hover {
+      background: #fde68a;
+    }
+  }
 }

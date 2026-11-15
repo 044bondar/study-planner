@@ -1,17 +1,26 @@
+import { useTaskContext } from '../hooks/useTaskContext';
 import type { Task } from '../types/task';
 import './TaskItem.scss';
 
 interface TaskItemProps {
     task: Task;
-    onToggle: (id: number) => void;
-    onDelete: (id: number) => void;
 }
 
-export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
+export function TaskItem({ task }: TaskItemProps) {
+    const { toggleTask, requestDelete, setEditingTask, pendingDeleteTaskId } = useTaskContext();
+
+    const isPendingDelete = pendingDeleteTaskId === task.id;
+
     return (
-        <article className={`task-item ${task.completed ? 'task-item--completed' : ''}`}>
+        <article
+            className={`task-item ${task.completed ? 'task-item--completed' : ''} ${
+                isPendingDelete ? 'task-item--pending-delete' : ''
+            }`}
+        >
             <div className="task-item__content">
-                <h3 className="task-item__title">{task.title}</h3>
+                <h3 className="task-item__title">
+                    {task.title} {isPendingDelete && '(Буде видалено...)'}
+                </h3>
                 <p className="task-item__desc">{task.description}</p>
                 <div className="task-item__meta">
                     <span className="task-item__badge">{task.category}</span>
@@ -28,14 +37,21 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
                 <button
                     type="button"
                     className="task-item__btn task-item__btn--toggle"
-                    onClick={() => onToggle(task.id)}
+                    onClick={() => toggleTask(task.id)}
                 >
                     {task.completed ? 'Повернути' : 'Виконано'}
                 </button>
                 <button
                     type="button"
+                    className="task-item__btn task-item__btn--edit"
+                    onClick={() => setEditingTask(task)}
+                >
+                    Редагувати
+                </button>
+                <button
+                    type="button"
                     className="task-item__btn task-item__btn--delete"
-                    onClick={() => onDelete(task.id)}
+                    onClick={() => requestDelete(task.id)}
                 >
                     Видалити
                 </button>

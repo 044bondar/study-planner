@@ -1,16 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import type { NewTaskData, Priority } from '../types/task';
+import { useTaskContext } from '../hooks/useTaskContext';
+import type { Priority, Task } from '../types/task';
 import './TaskForm.scss';
 
-interface TaskFormProps {
-    onAddTask: (data: NewTaskData) => void;
-}
+function TaskFormInner({ editingTask }: { editingTask: Task | null }) {
+    const { addTask, updateTask, setEditingTask } = useTaskContext();
 
-export function TaskForm({ onAddTask }: TaskFormProps) {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('React');
-    const [priority, setPriority] = useState<Priority>('medium');
+    const [title, setTitle] = useState(editingTask?.title ?? '');
+    const [description, setDescription] = useState(editingTask?.description ?? '');
+    const [category, setCategory] = useState(editingTask?.category ?? 'React');
+    const [priority, setPriority] = useState<Priority>(editingTask?.priority ?? 'medium');
     const [error, setError] = useState('');
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -21,23 +20,30 @@ export function TaskForm({ onAddTask }: TaskFormProps) {
             return;
         }
 
-        onAddTask({
+        const payload = {
             title: title.trim(),
             description: description.trim() || 'Без опису',
             category: category.trim() || 'Загальне',
             priority,
-        });
+        };
 
-        setTitle('');
-        setDescription('');
-        setCategory('React');
-        setPriority('medium');
+        if (editingTask) {
+            updateTask(editingTask.id, payload);
+        } else {
+            addTask(payload);
+            setTitle('');
+            setDescription('');
+            setCategory('React');
+            setPriority('medium');
+        }
         setError('');
     };
 
     return (
         <form className="task-form" onSubmit={handleSubmit}>
-            <h2 className="task-form__title">Нове навчальне завдання</h2>
+            <h2 className="task-form__title">
+                {editingTask ? `Редагування: ${editingTask.title}` : 'Нове навчальне завдання'}
+            </h2>
 
             <div className="task-form__grid">
                 <div className="task-form__field">
@@ -45,7 +51,7 @@ export function TaskForm({ onAddTask }: TaskFormProps) {
                     <input
                         className="task-form__input"
                         type="text"
-                        placeholder="Наприклад: Вивчити useState"
+                        placeholder="Наприклад: Вивчити useReducer"
                         value={title}
                         onChange={(e) => {
                             setTitle(e.target.value);
@@ -92,9 +98,25 @@ export function TaskForm({ onAddTask }: TaskFormProps) {
 
             {error && <p className="task-form__error">{error}</p>}
 
-            <button type="submit" className="task-form__submit">
-                Додати завдання
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button type="submit" className="task-form__submit">
+                    {editingTask ? 'Зберегти зміни' : 'Додати завдання'}
+                </button>
+                {editingTask && (
+                    <button
+                        type="button"
+                        className="task-filters__btn"
+                        onClick={() => setEditingTask(null)}
+                    >
+                        Скасувати
+                    </button>
+                )}
+            </div>
         </form>
     );
+}
+
+export function TaskForm() {
+    const { editingTask } = useTaskContext();
+    return <TaskFormInner key={editingTask?.id ?? 'new'} editingTask={editingTask} />;
 }
